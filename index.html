@@ -77,7 +77,6 @@
         let viewDate = new Date();
         let isDragging = false;
         let dragTargetState = true;
-        let touchStartTime = 0;
 
         function formatTime(decimalHours) {
             const h = Math.floor(Math.abs(decimalHours));
@@ -131,35 +130,26 @@
                 card.innerHTML = `<span class="text-xs md:text-sm font-black ${isSelected ? 'text-blue-600' : 'text-slate-700'}">${date.getDate()}</span>` + 
                     (hours > 0.01 ? `<div class="${isNegative && rateio > 2 ? 'bg-red-500' : (isNegative ? 'bg-emerald-500' : 'bg-blue-600')} text-white text-[7px] md:text-[9px] font-bold px-1 py-0.5 rounded mt-1 truncate w-full text-center">${isNegative ? '+' : '-'}${formatTime(hours)}</div>` : '');
                 
+                // Eventos Mouse
                 card.onmousedown = (e) => {
                     if (isSun) return;
                     isDragging = true;
                     dragTargetState = !selectedDays.includes(card.dataset.date);
                     toggleDay(card.dataset.date, dragTargetState);
                 };
+                card.onmousemove = (e) => { if (isDragging && !isSun) toggleDay(card.dataset.date, dragTargetState); };
 
+                // Eventos Touch Instantâneos
                 card.ontouchstart = (e) => {
                     if (isSun) return;
-                    touchStartTime = Date.now();
                     isDragging = true;
                     dragTargetState = !selectedDays.includes(card.dataset.date);
-                    // Não executa o toggle aqui para permitir distinguir entre clique e arraste
+                    toggleDay(card.dataset.date, dragTargetState);
                 };
-
-                card.onmousemove = (e) => { if (isDragging && !isSun) toggleDay(card.dataset.date, dragTargetState); };
-                
                 card.ontouchmove = (e) => {
                     if (!isDragging) return;
                     const t = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY)?.closest('.day-card');
                     if (t && t.dataset.isSun === "false") toggleDay(t.dataset.date, dragTargetState);
-                };
-
-                card.ontouchend = (e) => {
-                    // Se o toque foi curto (menos de 200ms), trata como um clique simples
-                    if (Date.now() - touchStartTime < 200) {
-                        toggleDay(card.dataset.date, dragTargetState);
-                    }
-                    isDragging = false;
                 };
 
                 grid.appendChild(card);
@@ -169,9 +159,13 @@
 
         function toggleDay(date, state) {
             const idx = selectedDays.indexOf(date);
-            if (state && idx === -1) selectedDays.push(date);
-            else if (!state && idx > -1) selectedDays.splice(idx, 1);
-            renderCalendar();
+            if (state && idx === -1) {
+                selectedDays.push(date);
+                renderCalendar();
+            } else if (!state && idx > -1) {
+                selectedDays.splice(idx, 1);
+                renderCalendar();
+            }
         }
 
         function updateUI(initial, isNeg, exceeded) {
@@ -222,7 +216,10 @@
             html2pdf().set({ margin: 0.3, filename: 'TimeBalance.pdf', html2canvas: { scale: 2 }, jsPDF: { orientation: 'landscape' } }).from(wrapper).save();
         }
 
-        document.addEventListener('mouseup', () => { isDragging = false; });
+        const stopDrag = () => { isDragging = false; };
+        document.addEventListener('mouseup', stopDrag);
+        document.addEventListener('touchend', stopDrag);
+
         renderCalendar();
     </script>
 </body>
